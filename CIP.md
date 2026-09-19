@@ -22,22 +22,24 @@ will be bound to a value by the time it is needed. This rules out
 "unbound/undefined variable" errors at run-time. The purpose of the scope check
 is to reject ill-scoped ("open") terms early.
 
+<!--
 [History: why was it introduced.]
+-->
 
 
 ## Motivation
 
 The scope check is estimated to increase script preparation time by about 25%
-[roman's measurements, my reproducers]. Since this is part of phase-2
-validation, it has a direct impact on transaction fees, which hinder developer
-adoption (a core pillar of Cardano's 2030 strategy
+[roman's measurements, my reproducers]. As this is part of phase-2 validation,
+that work is reflected in transaction fees and may hinder developer adoption (a
+core pillar of Cardano's 2030 strategy
 [https://product.cardano.intersectmbo.org/vision/strategy-2030/]). This raises
 the question: is the scope check worth it?
 
 
 ### No meaningful new script behaviour
 
-A removal of well-scopedness requires a new failure mode in UPLC semantics: a
+A removal of well-scopedness introduces a new failure mode in UPLC semantics: a
 variable which is unbound cannot be evaluated, causing the CEK machine to
 terminate with an error. This new behaviour does not meaningfully change
 language semantics: replace each free variable by `error`, and you have a
@@ -46,8 +48,8 @@ that can be written as an open term could already be written with well-scoped
 UPLC.
 
 Behaviour of well-scoped programs does not change: its evaluation can never
-reach this new failure mode because all variables will be bound to a value
-during execution.
+reach the new failure mode because all variables will be bound to a value during
+execution.
 
 
 ### The implementation does not rely on the scope check
@@ -55,7 +57,7 @@ during execution.
 No part of the Haskell CEK machine implementation relies on a term being
 well-scoped. There has always been logic in place that needed to deal with
 variable lookup failure[]. The formalized Agda CEK machine would require
-changes, which we discuss in Specification.
+changes, which we discuss in the Specification section below.
 
 We are not aware of any other implementation of the CEK machine or tooling that
 relies on the well-scopedness property. For example, the Amaru Rust
@@ -67,11 +69,17 @@ with variable lookup failure in the CEK machine.
 
 The scope check has a known bug[], which causes it to accept some programs with
 free variables. Therefore, open terms are de-facto part of the semantics
-already. Moreover, a fix is more involved than the removal: a stricter scope
+already.
+
+<!-- this argument applies if we were to fix existing language versions
+retroactively
+
+Moreover, a fix is more involved than the removal: a stricter scope
 check could cause existing scripts to start failing, so a fix is classified as
 backwards incompatible (see CIP-35 []) and requires a new ledger language. A
 removal on the other hand is considered backwards compatible and can be released
 with a hard fork for Plutus V1, V2 and V3.
+-->
 
 
 ## Developer tooling already performs the scope check off-chain
@@ -86,107 +94,83 @@ compiler (e.g. `2 + true`) are also allowed to run and fail in the CEK machine.
 
 ## Specification
 
+This specification covers changes to the Plutus Core language specification[],
+the implementation, the conformance test suite and the formalized metatheory.
+
 ### The Plutus Core specification
 
-The Scoping paragraph (Section 2.1.3) would need updating, mentioning that free
-variables are allowed.
-
-The reduction semantics would need a rule for a free variables:
+The reduction semantics for free variables is given by the following rule:
 
 ```
 ---------------
 x    ⟶    error
 ```
 
-The CEK semantics needs to change accordingly with one rule:
+The CEK semantics for free variables is given by the step:
 
 ```
 s; ρ ▷ x    ↦    ◆    (if x is not bound in ρ)
 ```
 
+Text in the specification is updated accordingly. For example:
 
-The section on Term reduction (2.3.2) should mention that capture-avoiding
-substitution also means that a term with a free variables can be safely
-substituted without capture.
+- The paragraph about "Scoping" (Section 2.1.3) does not require terms to be
+  well-scoped, but mentions that free variables are allowed.
+- The definition of substitution should state that capture-avoidance is
+  necessary because values may contain free variables.
 
-The specification also mentions "closed" in a few other places that would need
-to be addressed.
+### The Plutus Core implementation
 
+The CEK machine should throw an `OpenTermEvaluatedMachineError` error when
+trying to evaluate a free variable, after charging a `BVar` step.
 
-### The Haskell CEK machine implementation
-
-The Haskell CEK machine already deals with free variables: it throws a
-`OpenTermEvaluatedMachineError` error [source line]. This is consistent with the
-proposed change in the specification.
-
-To preserve replayability of chain history, scope checking needs to be guarded
-by protocol version, so that scope checking is still performed for historic
-transactions before the PV that implements this CIP.
-
+Only for Plutus language version ≤ 1.1.0, `mkTermToEvaluate` performs the scope
+check. This applies to Plutus V1, V2, V3.
 
 ### The Agda metatheory
 
-The current formalization in Agda[] uses intrinsically well-scoped syntax for
-UPLC. As such, its abstract syntax cannot represent open terms. To fix this,
-abstract syntax that corresponds to the syntax in the specification would have
-to be added. The CEK semantics could be implemented very similarly to the
-current ones, but Value environments should not be indexed by the scope anymore.
-Since lookup in environments will be partial, the CEK case of free variables
-needs to be implemented, following the rule outlined above.
-
+The plutus-metatheory formalization in Agda [] should include abstract syntax
+without scoping restrictions and a corresponding CEK machine, in addition to the
+scoped and typed formalisations (which cannot represent open terms). The CEK
+machine will implement the semantics for free variables as outlined above.
 
 ### The conformance test suite
 
-Currently, the conformance tests [] do not cover open terms. Tests should be
-added that evaluate open terms which both:
+The plutus conformance test suite should be extended with tests for open terms.
+In particular it should test the following two behaviours:
 
-- fail execution with an `OpenTermEvaluatedMachineError` error
-- succeed by not evaluating the free variables
-
-
-### Type of change and release
-
-__Type of change__ This proposal is a change to Plutus Core that does not fall
-into one of the specific Plutus changes mentioned in [CIP-0035], so it would
-fall under "Other changes". The change is backwards-compatible because it allows
-strictly more scripts to run, but should be PV guarded because it is not
-forwards-compatible.
-
-No changes to syntax, binary format and script-ledger interface are needed.
+- failure with an `OpenTermEvaluatedMachineError` error
+- succesful termination with free variables.
 
 
-### Costing and fees
+### Type of change and release required
 
-Incoming transactions that currently fail because of an ill-scoped script may
-start to validate after a removal. There are two scenarios:
+CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
+language version (LV). Which change applies here is not directly obvious.
+Consider for example:
 
-- Either the ill-scoped script still fails (a free variable evaluated). There is
-  no observable consensus change: a phase 2 failure means collateral is
-  forfeited. The node may have to do some extra work evaluating the program, but
-  it is fairly compensated with the collateral.
+> Changing the behaviour of a construct in the language
 
-- The script now now succeeds (no free variable was on the execution path). In
-  the latter case, a new transaction may succeed and fees are paid in the usual
-  way. Since this leads the ledger to accept more transaction, a PV check is in
-  order to be able to validate the chain history.
+This sounds applicable, because evaluating variables can now fail. However, free
+variables have never been a valid construct: the combination of concrete syntax
+and the well-scopedness requirement ruled out terms with free variables.
 
-Incoming transactions that currently succeed will keep succeeding after removal.
-The node will save the overhead of performing the scope check on all (reference)
-scripts used. This can eventually be reflected in lower fees.
+Therefore, the following type of change is more appropriate:
 
+> Adding a construct to the language
 
+The proposed change therefore requires bumping the language version from 1.1.0
+to 1.2.0, which in turn requires a hard fork.
 
+No changes to the binary format and script-ledger interface are needed.
 
 
 ## Rationale: How does this CIP achieve its goals?
 
 By removing well-scopedness from the specification and the implementation of the
-CEK machine, there is an immediate reduction of work performed by the node.
-Eventually this can be reflected in in transaction costs by adjusted fee
-parameters.
-
-
-
+CEK machine, there is an immediate reduction of work for scripts that have no
+free variables. Eventually this could be reflected in in transaction costs by
+adjusted fee parameters.
 
 
 ## Path to Active
@@ -214,14 +198,37 @@ The release type is a hard fork [CIP-0035]
 TODO
 
 
-## Copyright
+## Considerations
 
-TODO
+### How does this affect transaction validation?
 
-### Could well-scopedness improve run-time performance?
+Incoming transactions that were invalid due to a script failing the scope check
+can be valid after the scope check removal. There are two scenarios:
+
+- Either the ill-scoped script still fails (because it evaluated a free
+  variable). There is no observable consensus change: a phase 2 failure means
+  collateral is forfeited. The node may have to do some extra work evaluating
+  the program, but it is compensated for that with the collateral.
+
+- The script now now succeeds (no free variable was on the execution path), so
+  fees are paid in the usual way. Since this leads the ledger to accept more
+  transaction, a PV check is in order to be able to validate the chain history.
+
+Crucially, incoming transactions that currently succeed will keep succeeding
+after removal. The node will save the overhead of performing the scope check on
+all (reference) scripts used. This can eventually be reflected in lower fees.
+
+
+### Could the well-scopedness property improve CEK performance?
 
 TODO
 
 ### Can the scope check move to phase 1?
 
 TODO
+
+
+## Copyright
+
+TODO
+
