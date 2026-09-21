@@ -244,11 +244,14 @@ TODO
 
 #### Keeping well-scopedness for CEK performance
 
+TODO
 
-## Path to Active
+#### Fusing the scope check with script deserialization
 
 TODO
 
+
+## Path to Active
 
 ### Acceptance Criteria
 
