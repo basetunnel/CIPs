@@ -4,7 +4,7 @@ Title: Removal of the scope check in Plutus Core
 Category: Plutus
 Status: Proposed
 Authors:
-  - Jacco Krijnen <jacco.krijnen@midgardlabs.io>
+  - Jacco Krijnen <jacco.krijnen@iohk.io>
 Implementors: []
 Discussions:
   - Plutus-issue: https://github.com/IntersectMBO/plutus/issues/7368
@@ -29,7 +29,7 @@ a modest change to UPLC's semantics.
 
 The Plutus Core Language Specification[^plutus-spec] states in Section 2.1.3
 that a UPLC program must be _well-scoped_, meaning it has no free variables. It
-also states that the property must be checked by before script execution in the
+also states that the property must be checked before script execution in the
 CEK machine. The _scope check_ is performed during phase 2 of transaction
 validation and introduces overhead.
 
@@ -126,7 +126,7 @@ This specification covers changes to the Plutus Core language specification[],
 the implementation, the conformance test suite and the formalized metatheory.
 
 
-### Type of change
+### Type of change and versioning
 
 CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
 language version (LV). Which change applies here is not directly obvious.
@@ -181,10 +181,12 @@ check. This applies to Plutus V1, V2, V3.
 
 ### The Agda metatheory
 
-The plutus-metatheory formalization in Agda [] should include abstract syntax
+The plutus-metatheory formalization in Agda [^plutus-metatheory] should include abstract syntax
 without scoping restrictions and a corresponding CEK machine, in addition to the
 scoped and typed formalisations (which cannot represent open terms). The CEK
 machine will implement the semantics for free variables as outlined above.
+
+[^plutus-metatheory]: https://github.com/IntersectMBO/plutus/tree/master/plutus-metatheory
 
 ### The conformance test suite
 
@@ -192,23 +194,22 @@ The plutus conformance test suite should be extended with tests for open terms.
 In particular it should test the following two behaviours:
 
 - failure with an `OpenTermEvaluatedMachineError` error
-- succesful termination with free variables.
-
-
-### Versioning
-
-TODO
+- successful termination with free variables.
 
 
 ## Rationale: How does this CIP achieve its goals?
 
 By removing well-scopedness from the specification and the implementation of the
 CEK machine, there is an immediate reduction of work for scripts that have no
-free variables. Eventually this could be reflected in in transaction costs by
+free variables. Eventually this could be reflected in transaction costs by
 adjusted fee parameters.
 
 
 ### How does this affect transaction validation?
+
+
+<!-- (this commented text applies only if the scope check were to be guarded by
+PV instead of language version)
 
 Incoming transactions that were invalid due to a script failing the scope check
 can be valid after the scope check removal. There are two scenarios:
@@ -218,13 +219,14 @@ can be valid after the scope check removal. There are two scenarios:
   collateral is forfeited. The node may have to do some extra work evaluating
   the program, but it is compensated for that with the collateral.
 
-- The script now now succeeds (no free variable was on the execution path), so
+- The script now succeeds (no free variable was on the execution path), so
   fees are paid in the usual way. Since this leads the ledger to accept more
   transaction, a PV check is in order to be able to validate the chain history.
 
 Crucially, incoming transactions that currently succeed will keep succeeding
 after removal. The node will save the overhead of performing the scope check on
 all (reference) scripts used. This can eventually be reflected in lower fees.
+-->
 
 
 ### Alternatives considered
