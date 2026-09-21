@@ -4,11 +4,11 @@ Title: Removal of the scope check in Plutus Core
 Category: Plutus
 Status: Proposed
 Authors:
-    - Jacco Krijnen <jacco.krijnen@midgardlabs.io>
+  - Jacco Krijnen <jacco.krijnen@midgardlabs.io>
 Implementors: []
 Discussions:
-    - Plutus-issue: https://github.com/IntersectMBO/plutus/issues/7368
-    - Original-PR: https://github.com/cardano-foundation/CIPs/pull/?
+  - Plutus-issue: https://github.com/IntersectMBO/plutus/issues/7368
+  - Original-PR: https://github.com/cardano-foundation/CIPs/pull/?
 Created: 2026-09-21
 License: CC-BY-4.0
 ---
