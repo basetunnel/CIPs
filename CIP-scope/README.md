@@ -50,8 +50,10 @@ TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/p
 The scope check is estimated to increase script preparation time by about 25%
 [^bench]. As this is part of phase-2 validation, that work is reflected in
 transaction fees and may hinder developer adoption (a core pillar of Cardano's
-2030 strategy [https://product.cardano.intersectmbo.org/vision/strategy-2030/]).
-This raises the question: is the scope check worth it?
+2030 strategy[^2030-strategy]). This raises the question: is the scope check
+worth it?
+
+[^2030-strategy]: https://product.cardano.intersectmbo.org/vision/strategy-2030/
 
 [^bench]
 
