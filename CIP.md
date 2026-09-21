@@ -1,4 +1,17 @@
-# Removal of the UPLC scope condition and scope check
+---
+CIP: ?
+Title: Removal of the scope check in Plutus Core
+Category: Plutus
+Status: Proposed
+Authors:
+    - Jacco Krijnen <jacco.krijnen@midgardlabs.io>
+Implementors: []
+Discussions:
+    - Plutus-issue: https://github.com/IntersectMBO/plutus/issues/7368
+    - Original-PR: https://github.com/cardano-foundation/CIPs/pull/?
+Created: 2026-09-21
+License: CC-BY-4.0
+---
 
 
 ## Abstract
@@ -9,7 +22,10 @@ Removal of the check enables a reduction in fees for transaction validation with
 a modest change to UPLC's semantics.
 
 
-## Background
+
+## Motivation: Why is this CIP necessary?
+
+### Background
 
 The Plutus Core Language Specification states [Section 2.1.3] that a UPLC
 program must be _well-scoped_, meaning it has no free variables. It also states
@@ -23,11 +39,11 @@ will be bound to a value by the time it is needed. This rules out
 is to reject ill-scoped ("open") terms early.
 
 <!--
-[History: why was it introduced.]
+TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/plutus/issues/7368
 -->
 
+### The scope check is costly
 
-## Motivation
 
 The scope check is estimated to increase script preparation time by about 25%
 [roman's measurements, my reproducers]. As this is part of phase-2 validation,
@@ -62,12 +78,12 @@ changes, which we discuss in the Specification section below.
 We are not aware of any other implementation of the CEK machine or tooling that
 relies on the well-scopedness property. For example, the Amaru Rust
 implementation does not perform the scope check in the first place, and it deals
-with variable lookup failure in the CEK machine.
+with variable lookup failure in the same way as the Haskell node.
 
 
 ### The current scope check is unsound
 
-The scope check has a known bug[], which causes it to accept some programs with
+The scope check has a known bug[^scope-bug], which causes it to accept some programs with
 free variables. Therefore, open terms are de-facto part of the semantics
 already.
 
@@ -81,6 +97,8 @@ removal on the other hand is considered backwards compatible and can be released
 with a hard fork for Plutus V1, V2 and V3.
 -->
 
+[^scope-bug]: https://github.com/IntersectMBO/plutus-private/issues/2374
+
 
 ## Developer tooling already performs the scope check off-chain
 
@@ -92,10 +110,35 @@ compiler (e.g. `2 + true`) are also allowed to run and fail in the CEK machine.
 
 
 
+
+
 ## Specification
 
 This specification covers changes to the Plutus Core language specification[],
 the implementation, the conformance test suite and the formalized metatheory.
+
+
+### Type of change
+
+CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
+language version (LV). Which change applies here is not directly obvious.
+Consider for example:
+
+> Changing the behaviour of a construct in the language
+
+This sounds applicable, because evaluating variables can now fail. However, free
+variables have never been a valid construct: the combination of concrete syntax
+and the well-scopedness requirement ruled out terms with free variables.
+
+Therefore, the following type of change is more appropriate:
+
+> Adding a construct to the language
+
+The proposed change therefore requires bumping the language version from 1.1.0
+to 1.2.0, which in turn requires a hard fork.
+
+No changes to the binary format or script-ledger interface are needed.
+
 
 ### The Plutus Core specification
 
@@ -143,26 +186,9 @@ In particular it should test the following two behaviours:
 - succesful termination with free variables.
 
 
-### Type of change and release required
+### Versioning
 
-CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
-language version (LV). Which change applies here is not directly obvious.
-Consider for example:
-
-> Changing the behaviour of a construct in the language
-
-This sounds applicable, because evaluating variables can now fail. However, free
-variables have never been a valid construct: the combination of concrete syntax
-and the well-scopedness requirement ruled out terms with free variables.
-
-Therefore, the following type of change is more appropriate:
-
-> Adding a construct to the language
-
-The proposed change therefore requires bumping the language version from 1.1.0
-to 1.2.0, which in turn requires a hard fork.
-
-No changes to the binary format and script-ledger interface are needed.
+TODO
 
 
 ## Rationale: How does this CIP achieve its goals?
@@ -172,33 +198,6 @@ CEK machine, there is an immediate reduction of work for scripts that have no
 free variables. Eventually this could be reflected in in transaction costs by
 adjusted fee parameters.
 
-
-## Path to Active
-
-TODO
-
-
-## Acceptance Criteria
-
-TODO
-
-<!--
-
-MUST INCLUDE (CIP-35)
-- external implementations are available
-- plutus repo is updated with a specification of the proposal
-- plutus repo is updated with an implementation of the proposal
-
--->
-
-## Implementation Plan
-
-The release type is a hard fork [CIP-0035]
-
-TODO
-
-
-## Considerations
 
 ### How does this affect transaction validation?
 
@@ -219,16 +218,55 @@ after removal. The node will save the overhead of performing the scope check on
 all (reference) scripts used. This can eventually be reflected in lower fees.
 
 
-### Could the well-scopedness property improve CEK performance?
+### Alternatives considered
 
 TODO
 
-### Can the scope check move to phase 1?
+
+#### Fixing the scope check instead of removing it
 
 TODO
+
+#### Moving the scope check to phase 1
+
+TODO
+
+#### Keeping well-scopedness for CEK performance
+
+
+## Path to Active
+
+TODO
+
+
+### Acceptance Criteria
+
+TODO
+
+<!--
+
+MUST INCLUDE (CIP-0035)
+- external implementations are available
+- plutus repo is updated with a specification of the proposal
+- plutus repo is updated with an implementation of the proposal
+
+-->
+
+### Implementation Plan
+
+The release type is a hard fork [CIP-0035]
+
+TODO
+
+
+## Considerations
+
+
+
 
 
 ## Copyright
 
-TODO
+This CIP is licensed under
+[CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode).
 
