@@ -252,7 +252,17 @@ TODO
 
 ### Acceptance Criteria
 
-TODO
+- [ ] The Plutus Core specification in the `plutus` repository is updated with the
+      semantics for free variables given in this CIP.
+- [ ] The `plutus` repository contains an implementation of this CIP:
+  - [ ] `mkTermToEvaluate` skips the scope check for language version 1.2.0 and above;
+  - [ ] the Agda metatheory includes unscoped abstract syntax and a CEK machine over it;
+  - [ ] the conformance test suite contains the open-term tests described in the
+        Specification.
+- [ ] `cardano-ledger` accepts Plutus Core language version 1.2.0 for PlutusV1,
+      PlutusV2 and PlutusV3 from the target protocol version onwards.
+- [ ] A node release containing the change is live on Cardano mainnet after the
+      corresponding hard fork.
 
 <!--
 
