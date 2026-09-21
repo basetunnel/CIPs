@@ -1,5 +1,5 @@
 ---
-CIP: ?
+CIP: "?"
 Title: Removal of the scope check in Plutus Core
 Category: Plutus
 Status: Proposed
@@ -27,11 +27,11 @@ a modest change to UPLC's semantics.
 
 ### Background
 
-The Plutus Core Language Specification states [Section 2.1.3] that a UPLC
-program must be _well-scoped_, meaning it has no free variables. It also states
-that the property must be checked by before script execution in the CEK machine.
-The _scope check_ is performed during phase 2 of transaction validation and
-introduces overhead.
+The Plutus Core Language Specification[^plutus-spec] states in Section 2.1.3
+that a UPLC program must be _well-scoped_, meaning it has no free variables. It
+also states that the property must be checked by before script execution in the
+CEK machine. The _scope check_ is performed during phase 2 of transaction
+validation and introduces overhead.
 
 When a well-scoped ("closed") UPLC term is evaluated, we know that each variable
 will be bound to a value by the time it is needed. This rules out
@@ -42,15 +42,18 @@ is to reject ill-scoped ("open") terms early.
 TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/plutus/issues/7368
 -->
 
+[^plutus-spec]: https://plutus.cardano.intersectmbo.org/resources/plutus-core-spec.pdf
+
 ### The scope check is costly
 
 
 The scope check is estimated to increase script preparation time by about 25%
-[roman's measurements, my reproducers]. As this is part of phase-2 validation,
-that work is reflected in transaction fees and may hinder developer adoption (a
-core pillar of Cardano's 2030 strategy
-[https://product.cardano.intersectmbo.org/vision/strategy-2030/]). This raises
-the question: is the scope check worth it?
+[^bench]. As this is part of phase-2 validation, that work is reflected in
+transaction fees and may hinder developer adoption (a core pillar of Cardano's
+2030 strategy [https://product.cardano.intersectmbo.org/vision/strategy-2030/]).
+This raises the question: is the scope check worth it?
+
+[^bench]
 
 
 ### No meaningful new script behaviour
@@ -72,7 +75,7 @@ execution.
 
 No part of the Haskell CEK machine implementation relies on a term being
 well-scoped. There has always been logic in place that needed to deal with
-variable lookup failure[]. The formalized Agda CEK machine would require
+variable lookup failure[^cek-open-error]. The formalized Agda CEK machine would require
 changes, which we discuss in the Specification section below.
 
 We are not aware of any other implementation of the CEK machine or tooling that
@@ -81,14 +84,17 @@ implementation does not perform the scope check in the first place, and it deals
 with variable lookup failure in the same way as the Haskell node.
 
 
+[^cek-open-error]: https://github.com/IntersectMBO/plutus/blob/57d6d00c307c802d8a5c0f92253205438a9180f4/plutus-core/untyped-plutus-core/src/UntypedPlutusCore/Evaluation/Machine/Cek/Internal.hs#L1085
+
+
 ### The current scope check is unsound
 
 The scope check has a known bug[^scope-bug], which causes it to accept some programs with
 free variables. Therefore, open terms are de-facto part of the semantics
 already.
 
-<!-- this argument applies if we were to fix existing language versions
-retroactively
+<!-- this argument only applies if we were to fix existing language versions
+retroactively with only PV guarding
 
 Moreover, a fix is more involved than the removal: a stricter scope
 check could cause existing scripts to start failing, so a fix is classified as
