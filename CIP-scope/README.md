@@ -53,9 +53,9 @@ transaction fees and may hinder developer adoption (a core pillar of Cardano's
 2030 strategy[^2030-strategy]). This raises the question: is the scope check
 worth it?
 
+[^bench]: https://github.com/IntersectMBO/plutus/issues/7368
 [^2030-strategy]: https://product.cardano.intersectmbo.org/vision/strategy-2030/
 
-[^bench]
 
 
 ### No meaningful new script behaviour
@@ -113,7 +113,7 @@ with a hard fork for Plutus V1, V2 and V3.
 Languages such as Aiken, Plinth and Plutarch already check for scoping
 indirectly by means of a type checker, which guarantees well-scopedness for the
 generated UPLC. Other non-sensical programs that are typically rejected by a
-compiler (e.g. `2 + true`) are also allowed to run and fail in the CEK machine.
+compiler (e.g. `2 + true`) are already allowed to run and fail in the CEK machine.
 
 
 
@@ -153,14 +153,15 @@ No changes to the binary format or script-ledger interface are needed.
 The reduction semantics for free variables is given by the following rule:
 
 ```
----------------
-x    ⟶    error
+
+---------
+x ⟶ error
 ```
 
 The CEK semantics for free variables is given by the step:
 
 ```
-s; ρ ▷ x    ↦    ◆    (if x is not bound in ρ)
+s; ρ ▷ x ↦ ◆    (if x is not bound in ρ)
 ```
 
 Text in the specification is updated accordingly. For example:
