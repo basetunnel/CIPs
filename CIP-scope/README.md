@@ -17,10 +17,9 @@ License: CC-BY-4.0
 ## Abstract
 
 This CIP proposes the removal of the well-scopedness requirement from the Plutus
-Core specification and the scope check from the Plutus implementation. Removal
-of reduces the work performed during transaction validation with a modest change
-to UPLC's semantics.
-
+Core specification and the scope check from the Plutus implementation. Removing
+the check reduces the work performed during transaction validation with a modest
+change to the semantics of Untyped Plutus Core (UPLC).
 
 
 ## Motivation: Why is this CIP necessary?
@@ -47,9 +46,9 @@ TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/p
 ### The scope check is costly
 
 
-The scope check is estimated to increase script preparation time by about 25%
-[^bench]. This impacts transaction throughput and is reflected in higher fees
-that hinder developer adoption (both core pillar of Cardano's 2030
+The scope check is estimated to increase script preparation time by about
+25%[^bench]. This impacts transaction throughput and is reflected in higher fees
+that hinder developer adoption (both core pillars of Cardano's 2030
 strategy[^2030-strategy]). This raises the question: is the scope check worth
 it?
 
@@ -67,7 +66,7 @@ semantics: replace each free variable by `error`, and you have an equivalent
 well-scoped program. Put differently, any script logic that can be written as an
 open term can already be written with well-scoped UPLC.
 
-Behaviour of well-scoped programs does not change: its evaluation can never
+The behaviour of well-scoped programs does not change: its evaluation can never
 reach the new failure mode because all variables will be bound to a value during
 execution.
 
@@ -94,16 +93,15 @@ retroactively with only PV guarding
 
 Moreover, a fix is more involved than the removal: a stricter scope
 check could cause existing scripts to start failing, so a fix is classified as
-backwards incompatible (see CIP-35 []) and requires a new ledger language. A
+backwards incompatible (see CIP-0035) and requires a new ledger language. A
 removal on the other hand is considered backwards compatible and can be released
 with a hard fork for Plutus V1, V2 and V3.
 -->
 
 ### The scope check is unsound
 
-The scope check has a known bug[^scope-bug], which causes it to accept some programs with
-free variables. Therefore, open terms are de-facto part of the semantics
-already.
+The scope check has a known bug[^scope-bug], which causes it to accept some open
+terms. Therefore, free variables are de-facto part of the semantics already.
 
 [^scope-bug]: https://github.com/IntersectMBO/plutus-private/issues/2374
 
@@ -111,9 +109,9 @@ already.
 ### Developer tooling already performs the scope check off-chain
 
 Languages such as Aiken, Plinth and Plutarch already check for scoping
-indirectly by means of a type checker, which guarantees well-scopedness for the
-generated UPLC. Other non-sensical programs that are typically rejected by a
-compiler (e.g. `2 + true`) are already allowed to run and fail in the CEK machine.
+indirectly by means of a type checker, which guarantees well-scopedness of the
+code. Other non-sensical programs that are typically rejected by a compiler
+(e.g. `2 + true`) are already allowed to run and fail in the CEK machine.
 
 
 
@@ -122,8 +120,9 @@ compiler (e.g. `2 + true`) are already allowed to run and fail in the CEK machin
 
 ## Specification
 
-This specification covers changes to the Plutus Core language specification[],
-the implementation, the conformance test suite and the formalized metatheory.
+This specification covers changes to the Plutus Core language
+specification[^plutus-spec], the implementation, the conformance test suite and
+the formalized metatheory.
 
 
 ### The Plutus Core specification
@@ -151,15 +150,15 @@ Text in the specification is updated accordingly. For example:
 
 ### The Plutus Core implementation
 
-The CEK machine should throw an `OpenTermEvaluatedMachineError` error when
-trying to evaluate a free variable, after charging a `BVar` step.
+The CEK machine should throw an `OpenTermEvaluatedMachineError` when trying to
+evaluate a free variable, after charging a `BVar` step.
 
 Only for Plutus language version ≤ 1.1.0, `mkTermToEvaluate` performs the scope
 check. This applies to Plutus V1, V2, V3.
 
 ### The Agda metatheory
 
-The plutus-metatheory formalization in Agda [^plutus-metatheory] should include abstract syntax
+The plutus-metatheory formalization in Agda[^plutus-metatheory] should include abstract syntax
 without scoping restrictions and a corresponding CEK machine, in addition to the
 scoped and typed formalisations (which cannot represent open terms). The CEK
 machine will implement the semantics for free variables as outlined above.
@@ -171,7 +170,7 @@ machine will implement the semantics for free variables as outlined above.
 The plutus conformance test suite should be extended with tests for open terms.
 In particular it should test the following two behaviours:
 
-- failure with an `OpenTermEvaluatedMachineError` error
+- failure with an evaluation error due to open terms
 - successful termination with free variables.
 
 
@@ -200,17 +199,18 @@ No changes to the binary format or script-ledger interface are needed.
 
 ## Rationale: How does this CIP achieve its goals?
 
-By removing well-scopedness from the specification and the implementation of the
-CEK machine, there is an immediate reduction of work for scripts that have no
-free variables. Eventually this could be reflected in transaction costs by
-adjusted fee parameters.
+Removing well-scopedness from the specification and the implementation of the
+CEK machine reduces the work for validating (closed) scripts with version 1.2.0
+or newer. Eventually this could be reflected in transaction costs with adjusted
+fee parameters.
 
 
 ### How does this affect transaction validation?
 
-Scripts that were deployed before the removal use version 1.0.0 or 1.1.0 and
-this proposal does not change their behaviour. New transactions may declare
-1.2.0 and use Plutus without scope check, or previous versions that require it.
+The change is backwards-compatible. Scripts that were deployed before the
+removal use version 1.0.0 or 1.1.0 and this proposal does not change their
+behaviour. New scripts may declare 1.2.0 and use Plutus without scope check, or
+previous versions that require it.
 
 
 <!-- (this commented text applies only if the scope check were to be guarded by
@@ -257,10 +257,10 @@ in the CEK.
 TODO: mention how different data structures were benchmarked when the current
 implementation of CEK environments was chosen.
 
-If it does turn out that in the future, there is some optimization that makes a
-scope check worthwile, then such change is not prevented by this proposal.
-Before script execution, the node could then perform the scope check, and if it
-suceeds use the optimised CEK machine, if it fails us the un-optimised one.
+If in the future an optimisation is found that makes a scope check worthwhile,
+this proposal does not preven it. Before script execution, the node could still
+perform the scope check, and if it succeeds use the optimised CEK machine, and
+if it fails us the existing un-optimised one.
 
 #### Fusing the scope check with script deserialization
 
@@ -278,12 +278,14 @@ terms to the CEK environment during execution.
 
 Production implementations use programming languages that do not have this level
 of type safety. In particular, the Haskell node uses plain abstract syntax that
-has to deal with the free variable case.
+has to deal with the free variable case anyway. The scope check does not by
+itself prevent such bugs.
 
 While guaranteeing the absence of scoping bugs is good in principle, a more
 pressing concern for CEK machines in practice is to avoid bugs in the highly
 optimised data structures and the programming style necessary to achieve
 production-level performance.
+
 
 ## Path to Active
 
@@ -315,7 +317,8 @@ MUST INCLUDE (CIP-0035)
 ### Implementation Plan
 
 The implementation will be performed by the Plutus Core team and released by
-means of a hard fork, making 1.2.0 available for Plutus V1, V2 and V3.
+means of a hard fork, making language version 1.2.0 available for PlutusV1, V2
+and V3.
 
 ## Copyright
 
