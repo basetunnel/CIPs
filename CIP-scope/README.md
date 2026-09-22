@@ -62,11 +62,10 @@ worth it?
 
 A removal of well-scopedness introduces a new failure mode in UPLC semantics: a
 variable which is unbound cannot be evaluated, causing the CEK machine to
-terminate with an error. This new behaviour does not meaningfully change
-language semantics: replace each free variable by `error`, and you have a
-well-scoped program that behaves identically. Put differently, any script logic
-that can be written as an open term could already be written with well-scoped
-UPLC.
+terminate with an error. Such behaviour does not meaningfully change language
+semantics: replace each free variable by `error`, and you have an equivalent
+well-scoped program. Put differently, any script logic that can be written as an
+open term can already be written with well-scoped UPLC.
 
 Behaviour of well-scoped programs does not change: its evaluation can never
 reach the new failure mode because all variables will be bound to a value during
@@ -89,11 +88,6 @@ with variable lookup failure in the same way as the Haskell node.
 [^cek-open-error]: https://github.com/IntersectMBO/plutus/blob/57d6d00c307c802d8a5c0f92253205438a9180f4/plutus-core/untyped-plutus-core/src/UntypedPlutusCore/Evaluation/Machine/Cek/Internal.hs#L1085
 
 
-### The current scope check is unsound
-
-The scope check has a known bug[^scope-bug], which causes it to accept some programs with
-free variables. Therefore, open terms are de-facto part of the semantics
-already.
 
 <!-- this argument only applies if we were to fix existing language versions
 retroactively with only PV guarding
@@ -104,6 +98,12 @@ backwards incompatible (see CIP-35 []) and requires a new ledger language. A
 removal on the other hand is considered backwards compatible and can be released
 with a hard fork for Plutus V1, V2 and V3.
 -->
+
+### The scope check is unsound
+
+The scope check has a known bug[^scope-bug], which causes it to accept some programs with
+free variables. Therefore, open terms are de-facto part of the semantics
+already.
 
 [^scope-bug]: https://github.com/IntersectMBO/plutus-private/issues/2374
 
@@ -124,28 +124,6 @@ compiler (e.g. `2 + true`) are already allowed to run and fail in the CEK machin
 
 This specification covers changes to the Plutus Core language specification[],
 the implementation, the conformance test suite and the formalized metatheory.
-
-
-### Type of change and versioning
-
-CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
-language version (LV). Which change applies here is not directly obvious.
-Consider for example:
-
-> Changing the behaviour of a construct in the language
-
-This sounds applicable, because evaluating variables can now fail. However, free
-variables have never been a valid construct: the combination of concrete syntax
-and the well-scopedness requirement ruled out terms with free variables.
-
-Therefore, the following type of change is more appropriate:
-
-> Adding a construct to the language
-
-The proposed change therefore requires bumping the language version from 1.1.0
-to 1.2.0, which in turn requires a hard fork.
-
-No changes to the binary format or script-ledger interface are needed.
 
 
 ### The Plutus Core specification
@@ -197,6 +175,29 @@ In particular it should test the following two behaviours:
 - successful termination with free variables.
 
 
+### Type of change and versioning
+
+CIP-0035 lists typical changes to Plutus Core and how those affect the Plutus
+language version (LV). Which change applies here is not directly obvious.
+Consider for example:
+
+> Changing the behaviour of a construct in the language
+
+This sounds applicable, because evaluating variables can now fail. However, free
+variables have never been a valid construct: the combination of concrete syntax
+and the well-scopedness requirement ruled out terms with free variables.
+
+Therefore, the following type of change is more appropriate:
+
+> Adding a construct to the language
+
+The proposed change therefore requires bumping the language version from 1.1.0
+to 1.2.0, which in turn requires a hard fork.
+
+No changes to the binary format or script-ledger interface are needed.
+
+
+
 ## Rationale: How does this CIP achieve its goals?
 
 By removing well-scopedness from the specification and the implementation of the
@@ -207,10 +208,9 @@ adjusted fee parameters.
 
 ### How does this affect transaction validation?
 
-Scripts that were deployed before the removal cannot use version 1.0.0 or 1.1.0
-and this proposal does not change that behaviour. New transactions may declare
-1.2.0 and use Plutus without scope check, for older versions no behaviour
-changes.
+Scripts that were deployed before the removal use version 1.0.0 or 1.1.0 and
+this proposal does not change their behaviour. New transactions may declare
+1.2.0 and use Plutus without scope check, or previous versions that require it.
 
 
 <!-- (this commented text applies only if the scope check were to be guarded by
@@ -314,16 +314,8 @@ MUST INCLUDE (CIP-0035)
 
 ### Implementation Plan
 
-The release type is a hard fork [CIP-0035]
-
-TODO
-
-
-## Considerations
-
-
-
-
+The implementation will be performed by the Plutus Core team and released by
+means of a hard fork, making 1.2.0 available for Plutus V1, V2 and V3.
 
 ## Copyright
 
