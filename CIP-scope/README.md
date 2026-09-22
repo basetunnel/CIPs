@@ -48,10 +48,10 @@ TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/p
 
 
 The scope check is estimated to increase script preparation time by about 25%
-[^bench], work that is reflected in transaction fees. This reduces throughput
-and lower fees contribute to developer adoption (both are core pillar of
-Cardano's 2030 strategy[^2030-strategy]). This raises the question: is the scope
-check worth it?
+[^bench]. This impacts transaction throughput and is reflected in higher fees
+that hinder developer adoption (both core pillar of Cardano's 2030
+strategy[^2030-strategy]). This raises the question: is the scope check worth
+it?
 
 [^bench]: https://github.com/IntersectMBO/plutus/issues/7368
 [^2030-strategy]: https://product.cardano.intersectmbo.org/vision/strategy-2030/
