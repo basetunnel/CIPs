@@ -16,10 +16,10 @@ License: CC-BY-4.0
 
 ## Abstract
 
-This CIP proposes the removal of A) the well-scopedness requirement from the
-Plutus Core specification and B) the scope check from the implementation.
-Removal of the check enables a reduction in fees for transaction validation with
-a modest change to UPLC's semantics.
+This CIP proposes the removal of the well-scopedness requirement from the Plutus
+Core specification and the scope check from the Plutus implementation. Removal
+of reduces the work performed during transaction validation with a modest change
+to UPLC's semantics.
 
 
 
@@ -48,10 +48,10 @@ TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/p
 
 
 The scope check is estimated to increase script preparation time by about 25%
-[^bench]. As this is part of phase-2 validation, that work is reflected in
-transaction fees and may hinder developer adoption (a core pillar of Cardano's
-2030 strategy[^2030-strategy]). This raises the question: is the scope check
-worth it?
+[^bench], work that is reflected in transaction fees. This reduces throughput
+and lower fees contribute to developer adoption (both are core pillar of
+Cardano's 2030 strategy[^2030-strategy]). This raises the question: is the scope
+check worth it?
 
 [^bench]: https://github.com/IntersectMBO/plutus/issues/7368
 [^2030-strategy]: https://product.cardano.intersectmbo.org/vision/strategy-2030/
