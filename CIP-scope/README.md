@@ -108,7 +108,7 @@ with a hard fork for Plutus V1, V2 and V3.
 [^scope-bug]: https://github.com/IntersectMBO/plutus-private/issues/2374
 
 
-## Developer tooling already performs the scope check off-chain
+### Developer tooling already performs the scope check off-chain
 
 Languages such as Aiken, Plinth and Plutarch already check for scoping
 indirectly by means of a type checker, which guarantees well-scopedness for the
