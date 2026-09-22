@@ -207,6 +207,11 @@ adjusted fee parameters.
 
 ### How does this affect transaction validation?
 
+Scripts that were deployed before the removal cannot use version 1.0.0 or 1.1.0
+and this proposal does not change that behaviour. New transactions may declare
+1.2.0 and use Plutus without scope check, for older versions no behaviour
+changes.
+
 
 <!-- (this commented text applies only if the scope check were to be guarded by
 PV instead of language version)
@@ -231,41 +236,72 @@ all (reference) scripts used. This can eventually be reflected in lower fees.
 
 ### Alternatives considered
 
-TODO
-
 
 #### Fixing the scope check instead of removing it
 
-TODO
+This would not solve the main motivation of the CIP: the cost of running the
+check. Fixing the scope check retro-actively for 1.0.0 and 1.1.0 requires a
+separate proposal.
 
 #### Moving the scope check to phase 1
 
-TODO
+This would also not solve the main motivation. Instead, the node still has to do
+the same amount of work, but cannot be compensated with collateral when the
+check fails.
 
 #### Keeping well-scopedness for CEK performance
 
-TODO
+There is no evidence that the well-scopedness invariant can result in speed-ups
+in the CEK.
+
+TODO: mention how different data structures were benchmarked when the current
+implementation of CEK environments was chosen.
+
+If it does turn out that in the future, there is some optimization that makes a
+scope check worthwile, then such change is not prevented by this proposal.
+Before script execution, the node could then perform the scope check, and if it
+suceeds use the optimised CEK machine, if it fails us the un-optimised one.
 
 #### Fusing the scope check with script deserialization
 
+The work of scope checking could be reduced when fusing the traversal into
+deserialization.
+
 TODO
 
+#### Keeping well-scopedness to prevent mistakes in a CEK implementation
+
+The Agda metatheory implements a CEK machine using intrinsically-scoped syntax
+for UPLC. Intrinsic scoping ensures that certain scoping bugs are prevented by
+Agda's type checker. For example, it is not possible to accidentally add open
+terms to the CEK environment during execution.
+
+Production implementations use programming languages that do not have this level
+of type safety. In particular, the Haskell node uses plain abstract syntax that
+has to deal with the free variable case.
+
+While guaranteeing the absence of scoping bugs is good in principle, a more
+pressing concern for CEK machines in practice is to avoid bugs in the highly
+optimised data structures and the programming style necessary to achieve
+production-level performance.
 
 ## Path to Active
 
 ### Acceptance Criteria
 
-- [ ] The Plutus Core specification in the `plutus` repository is updated with the
-      semantics for free variables given in this CIP.
+- [ ] The Plutus Core specification is updated with the semantics for free
+  variables given in this CIP.
 - [ ] The `plutus` repository contains an implementation of this CIP:
-  - [ ] `mkTermToEvaluate` skips the scope check for language version 1.2.0 and above;
-  - [ ] the Agda metatheory includes unscoped abstract syntax and a CEK machine over it;
+  - [ ] `mkTermToEvaluate` skips the scope check for language version 1.2.0 and
+    above;
+  - [ ] the Agda metatheory includes unscoped abstract syntax and a CEK machine
+    over it;
   - [ ] the conformance test suite contains the open-term tests described in the
-        Specification.
+    Specification.
 - [ ] `cardano-ledger` accepts Plutus Core language version 1.2.0 for PlutusV1,
-      PlutusV2 and PlutusV3 from the target protocol version onwards.
+  PlutusV2 and PlutusV3 from the target protocol version onwards.
 - [ ] A node release containing the change is live on Cardano mainnet after the
-      corresponding hard fork.
+  corresponding hard fork.
 
 <!--
 
