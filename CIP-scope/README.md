@@ -46,11 +46,16 @@ TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/p
 ### The scope check is costly
 
 
-The scope check is estimated to increase script preparation time by about
-25%[^bench]. This impacts transaction throughput and is reflected in higher fees
-that hinder developer adoption (both core pillars of Cardano's 2030
-strategy[^2030-strategy]). This raises the question: is the scope check worth
-it?
+Benchmarks show that the scope check accounts for roughly 20% of script
+preparation time (decoding, version check and scope check), and about 3% of
+total transaction validation time[^bench]. Such work is charged for only
+indirectly, with size-based fee parameters such as `minFeeRefScriptCostPerByte`.
+A removal reduces work per script execution and hence leaves room for future
+parameter recalibration and reduced fees.
+
+Transaction throughput and developer adoption (which is hindered by high fees)
+are both core pillars of Cardano's 2030 strategy[^2030-strategy]). This raises
+the question: is the scope check worth it?
 
 [^bench]: https://github.com/IntersectMBO/plutus/issues/7368
 [^2030-strategy]: https://product.cardano.intersectmbo.org/vision/strategy-2030/
