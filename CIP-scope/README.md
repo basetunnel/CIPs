@@ -37,9 +37,11 @@ will be bound to a value by the time it is needed. This rules out
 "unbound/undefined variable" errors at run-time. The purpose of the scope check
 is to reject ill-scoped ("open") terms early.
 
-<!--
-TODO: History: why was it introduced? See e.g. https://github.com/IntersectMBO/plutus/issues/7368
--->
+The scope check is an accident of history and comes from the time when the CEK
+machine operated on named variables, while the serialized AST used de Bruijn
+indices. That required a conversion from de Bruijn indices to names, which
+incidentally enforced well-scopedness. A scope check was kept to preserve that
+behaviour. This "wasn't a conscious choice"[^bench].
 
 [^plutus-spec]: https://plutus.cardano.intersectmbo.org/resources/plutus-core-spec.pdf
 
@@ -63,20 +65,27 @@ the question: is the scope check worth it?
 
 ### The scope check has limited benefit
 
-Removal introduces exactly one new failure mode in the UPLC semantics: an
-unbound variable cannot be evaluated, causing the CEK machine to terminate with
-an error. Programs that hit this failure would have also failed the scope check.
-The difference is that the failure happens earlier with the scope check.
-Programs with free variables that are never evaluated (dead code) now succeed
-instead of being rejected.
+Removal introduces one new failure mode in the UPLC semantics: an unbound
+variable cannot be evaluated, causing the CEK machine to terminate with an
+error. Let us consider what the change means for ill-scoped and well-scoped
+terms:
 
-Removal is a conservative extension to the semantics: well-scoped programs
-cannot reach the new failure mode, because all variables that are evaluated will
-be bound to a value.
+- Ill-scoped terms that hit this new failure would have also failed the scope
+  check. The difference is that with the scope check, the failure happens
+  earlier.
+
+- Ill-scoped programs that contain free variables but don't evaluate them (dead
+  code) will not hit the new failure mode. Here, the difference is that they
+  would have been rejected by the scope check.
+
+- For well-scoped programs nothing changes, except that no time is spent on the
+  scope check. Removal is a conservative extension to the semantics: all
+  variables that are evaluated will be bound to a value at run-time, so the new
+  failure mode can never be reached.
 
 Moreover, any program logic that can be written as an open term can already be
 written with well-scoped UPLC: replace each free variable by `error`, and you
-obtain a well-scoped program that has behaves equivalently.
+obtain a well-scoped program that behaves equivalently.
 
 
 ### The implementation does not rely on the scope check
@@ -89,26 +98,16 @@ require some changes, which we discuss in the Specification section below.
 We are not aware of any other implementation of the CEK machine or tooling that
 relies on the well-scopedness property. For example, the Amaru Rust
 implementation deals with variable lookup failure in the same way as the Haskell
-node (and notably doesn't perform the scope check in the first place).
+node.
 
 [^cek-open-error]: https://github.com/IntersectMBO/plutus/blob/57d6d00c307c802d8a5c0f92253205438a9180f4/plutus-core/untyped-plutus-core/src/UntypedPlutusCore/Evaluation/Machine/Cek/Internal.hs#L1085
 
 
+### The current scope check is unsound
 
-<!-- this argument only applies if we were to fix existing language versions
-retroactively with only PV guarding
-
-Moreover, a fix is more involved than the removal: a stricter scope
-check could cause existing scripts to start failing, so a fix is classified as
-backwards incompatible (see CIP-0035) and requires a new ledger language. A
-removal on the other hand is considered backwards compatible and can be released
-with a hard fork for Plutus V1, V2 and V3.
--->
-
-### The scope check is unsound
-
-The scope check has a known bug[^scope-bug], which causes it to accept some open
-terms. Therefore, free variables are de-facto part of the semantics already.
+The scope check currently has a bug[^scope-bug], which causes it to accept some
+open terms already. Therefore, free variables have been de-facto part of the
+semantics for some time.
 
 [^scope-bug]: https://github.com/IntersectMBO/plutus/issues/7965
 
@@ -117,8 +116,9 @@ terms. Therefore, free variables are de-facto part of the semantics already.
 
 Languages such as Aiken, Plinth and Plutarch already check for scoping
 indirectly by means of a type checker, which guarantees well-scopedness of the
-code. Other non-sensical programs that are typically rejected by a compiler
-(e.g. `2 + true`) are already allowed to run and fail in the CEK machine.
+code. While hand-written UPLC may accidentally contain free variables, other
+non-sensical programs (`2 + true`) are also allowed to run and fail in the CEK
+machine.
 
 
 ## Specification
@@ -215,8 +215,10 @@ behaviour. New scripts may declare 1.2.0 and use Plutus without scope check, or
 previous versions that require it.
 
 
-<!-- (this commented text applies only if the scope check were to be guarded by
-PV instead of language version)
+<!--
+
+(this commented text applies only if the scope check were to be guarded by PV
+instead of language version)
 
 Incoming transactions that were invalid due to a script failing the scope check
 can be valid after the scope check removal. There are two scenarios:
@@ -242,7 +244,9 @@ all (reference) scripts used. This can eventually be reflected in lower fees.
 #### Fixing the scope check instead of removing it
 
 This would not solve the issue of the check being costly. Fixing the scope check
-retro-actively for 1.0.0 and 1.1.0 requires a separate proposal.
+retro-actively for 1.0.0 and 1.1.0 requires a separate proposal. Moreover, a fix
+is not backwards compatible, as there could be scripts that succeed but start
+failing after a fix. Removal of the scope check is a conservative extension.
 
 #### Moving the scope check to phase 1
 
@@ -262,9 +266,9 @@ if it fails us the existing un-optimised one.
 
 #### Fusing the scope check with script deserialization
 
-An experimant has shown that fusing the scope check with deserialization can
-save some work [^fusing], but it still requires the work and doesn't address the
-other parts of the motivation.
+An experiment has shown that fusing the scope check with deserialization
+improves performance [^fusing], but it still requires the work and doesn't
+address the other parts of the motivation.
 
 [^fusing]: https://github.com/IntersectMBO/plutus/issues/7368#issuecomment-3686732448
 
@@ -276,16 +280,11 @@ for UPLC. Intrinsic scoping ensures that certain scoping bugs are prevented by
 Agda's type checker. For example, it is not possible to accidentally add open
 terms to the CEK environment during execution.
 
-Production implementations use programming languages that do not have this level
-of type safety. In particular, the Haskell node uses plain abstract syntax that
-has to deal with the free variable case anyway. The scope check does not by
-itself prevent such bugs.
-
-While guaranteeing the absence of scoping bugs is good in principle, a more
-pressing concern for CEK machines in practice is to avoid bugs in the highly
-optimised data structures and the programming style necessary to achieve
-production-level performance.
-
+Production implementations use programming languages that do not typically use
+this level of type safety. In particular, the Haskell node uses plain abstract
+syntax that has to deal with the free variable case anyway. Even though the
+scope check is performed in those implementations, it does not by itself prevent
+such bugs.
 
 ## Path to Active
 
@@ -304,15 +303,6 @@ production-level performance.
   PlutusV2 and PlutusV3 from the target protocol version onwards.
 - [ ] A node release containing the change is live on Cardano mainnet after the
   corresponding hard fork.
-
-<!--
-
-MUST INCLUDE (CIP-0035)
-- external implementations are available
-- plutus repo is updated with a specification of the proposal
-- plutus repo is updated with an implementation of the proposal
-
--->
 
 ### Implementation Plan
 
