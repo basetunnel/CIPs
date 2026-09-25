@@ -65,9 +65,9 @@ the question: is the scope check worth it?
 
 ### The scope check has limited benefit
 
-Removal introduces one new failure mode in the UPLC semantics: an unbound
-variable cannot be evaluated, causing the CEK machine to terminate with an
-error. Let us consider what the change means for ill-scoped and well-scoped
+A removal of the check introduces one new failure mode in the UPLC semantics: an
+unbound variable cannot be evaluated, causing the CEK machine to terminate with
+an error. Let us consider what the change means for ill-scoped and well-scoped
 terms:
 
 - Ill-scoped terms that hit this new failure would have also failed the scope
@@ -105,8 +105,9 @@ node.
 
 ### The current scope check is unsound
 
-The scope check currently has a bug[^scope-bug], which causes it to accept some
-open terms already. Therefore, free variables have been de-facto part of the
+The scope check in the Haskell node has a bug[^scope-bug], which causes it to
+accept some open terms already. This should be fixed (independently of this
+proposal), but in practice free variables have already been part of the
 semantics for some time.
 
 [^scope-bug]: https://github.com/IntersectMBO/plutus/issues/7965
@@ -117,7 +118,7 @@ semantics for some time.
 Languages such as Aiken, Plinth and Plutarch already check for scoping
 indirectly by means of a type checker, which guarantees well-scopedness of the
 code. While hand-written UPLC may accidentally contain free variables, other
-non-sensical programs (`2 + true`) are also allowed to run and fail in the CEK
+non-sensical programs (e.g. `2 + true`) are also allowed to run and fail in the CEK
 machine.
 
 
@@ -211,8 +212,7 @@ could be reflected in transaction costs if fee parameters can be adjusted.
 
 The change is backwards-compatible. Scripts that were deployed before the
 removal use version 1.0.0 or 1.1.0 and this proposal does not change their
-behaviour. New scripts may declare 1.2.0 and use Plutus without scope check, or
-previous versions that require it.
+behaviour. New scripts may declare 1.2.0 and use Plutus without scope check.
 
 
 <!--
@@ -244,9 +244,10 @@ all (reference) scripts used. This can eventually be reflected in lower fees.
 #### Fixing the scope check instead of removing it
 
 This would not solve the issue of the check being costly. Fixing the scope check
-retro-actively for 1.0.0 and 1.1.0 requires a separate proposal. Moreover, a fix
-is not backwards compatible, as there could be scripts that succeed but start
-failing after a fix. Removal of the scope check is a conservative extension.
+retro-actively for 1.0.0 and 1.1.0 requires a separate proposal. Such a fix is
+also not backwards compatible, as there could be scripts that succeed (have
+unused free variables, not covered by the scope check) which start failing after
+a fix. Removal of the scope check is a conservative extension.
 
 #### Moving the scope check to phase 1
 
@@ -261,14 +262,14 @@ in the CEK machine implementation.
 
 If in the future an optimisation is found that makes a scope check worthwhile,
 this proposal does not preven it. Before script execution, the node could still
-perform the scope check, and if it succeeds use the optimised CEK machine, and
-if it fails us the existing un-optimised one.
+perform the scope check and use the optimised CEK machine on success, or fall
+back to the un-optimised one when the check fails.
 
 #### Fusing the scope check with script deserialization
 
 An experiment has shown that fusing the scope check with deserialization
-improves performance [^fusing], but it still requires the work and doesn't
-address the other parts of the motivation.
+improves performance [^fusing], but it still requires work for each variable and
+doesn't address the other parts of the motivation.
 
 [^fusing]: https://github.com/IntersectMBO/plutus/issues/7368#issuecomment-3686732448
 
