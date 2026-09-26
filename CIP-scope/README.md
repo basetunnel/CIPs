@@ -261,7 +261,7 @@ There is no evidence that the well-scopedness invariant can result in speed-ups
 in the CEK machine implementation.
 
 If in the future an optimisation is found that makes a scope check worthwhile,
-this proposal does not preven it. Before script execution, the node could still
+this proposal does not prevent it. Before script execution, the node could still
 perform the scope check and use the optimised CEK machine on success, or fall
 back to the un-optimised one when the check fails.
 
