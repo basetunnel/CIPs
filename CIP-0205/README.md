@@ -172,9 +172,9 @@ not used for on-chain evaluation.
 
 The plutus-metatheory formalisation in Agda[^plutus-metatheory] has
 formalisations of scoped PLC and typed PLC. In addition to those, it should
-include abstract syntax of UPLC without scoping constraints with a corresponding
-CEK machine and reduction semantics. Both semantics will implement the semantics
-for free variables as outlined above.
+include abstract syntax of UPLC without intrinsic scoping, as well as a
+corresponding CEK machine and reduction semantics. Both semantics will implement
+the rules for free variables as outlined above.
 
 The existing formalisations for typed PLC and scoped PLC should not implement
 free variables. They remain useful because they formalise intermediate
