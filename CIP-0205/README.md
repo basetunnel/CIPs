@@ -162,6 +162,12 @@ evaluate a free variable, after charging a `BVar` step.
 Only for Plutus language version ≤ 1.1.0, `mkTermToEvaluate` performs the scope
 check. This applies to Plutus V1, V2, V3.
 
+Some CEK machinery should be updated to deal with open terms properly. For
+example `dichargeCekValue` [^discharge], even though that particular function is
+not used for on-chain evaluation.
+
+[^discharge]: [`dischargeCekValue` doesn't handle open terms correctly](https://github.com/IntersectMBO/plutus/issues/7526)
+
 ### The Agda metatheory
 
 The plutus-metatheory formalization in Agda[^plutus-metatheory] should include abstract syntax
